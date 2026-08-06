@@ -1,0 +1,18 @@
+services:
+  miniroom:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      APP_ENV: production
+      DATABASE_PATH: /app/data/miniroom.db
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
+      TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY:?TOTP_ENCRYPTION_KEY is required}
+    volumes:
+      - miniroom-db:/app/data
+      - miniroom-uploads:/app/static/uploads
+
+volumes:
+  miniroom-db:
+  miniroom-uploads:
