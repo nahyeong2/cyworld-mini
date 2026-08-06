@@ -6,6 +6,10 @@ services:
       - "8000:8000"
     environment:
       APP_ENV: production
+      LANG: C.UTF-8
+      LC_ALL: C.UTF-8
+      PYTHONUTF8: "1"
+      PYTHONIOENCODING: utf-8
       DATABASE_PATH: /app/data/miniroom.db
       SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
       TOTP_ENCRYPTION_KEY: ${TOTP_ENCRYPTION_KEY:?TOTP_ENCRYPTION_KEY is required}
