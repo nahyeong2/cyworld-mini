@@ -6,6 +6,7 @@ services:
       - "8000:8000"
     environment:
       APP_ENV: production
+      COOKIE_SECURE: "0"
       LANG: C.UTF-8
       LC_ALL: C.UTF-8
       PYTHONUTF8: "1"
