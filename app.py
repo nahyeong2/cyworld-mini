@@ -301,6 +301,8 @@ def load_user():
 
 @app.after_request
 def security_headers(response):
+    if response.mimetype and response.mimetype.startswith("text/"):
+        response.headers["Content-Type"] = f"{response.mimetype}; charset=utf-8"
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
