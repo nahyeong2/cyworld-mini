@@ -53,6 +53,9 @@ UTF-8로 고정되어 있습니다.
 컨테이너를 처음 시작할 때 `openssl`이 Flask 세션 키와 TOTP 암호화 키를 자동으로
 생성합니다. 키는 이미지나 저장소가 아닌 `miniroom-db` 볼륨의 `runtime-secrets`
 파일에 권한 `600`으로 보관되므로 컨테이너를 다시 만들어도 유지됩니다.
+
+기본 Compose 설정은 `http://localhost:8000` 로컬 접속을 위해 `COOKIE_SECURE=0`을
+사용합니다. HTTPS 프록시 뒤에 배포할 때는 반드시 `COOKIE_SECURE=1`로 변경합니다.
 - TLS를 종료하는 Nginx/ALB 뒤에서 Gunicorn을 실행하고 HTTP를 HTTPS로 강제 전환해야 합니다.
 - 다중 서버 환경에서는 SQLite 대신 관리형 PostgreSQL로 마이그레이션하고 인증 시도 제한 저장소도 공유해야 합니다.
 - 다중 서버 운영에서는 자동 생성 파일 대신 AWS Secrets Manager 등의 비밀 저장소를 사용해야 합니다.
