@@ -51,7 +51,7 @@ SECRET_KEY, TOTP_ENCRYPTION_KEY = load_security_keys()
 TOTP_CIPHER = Fernet(TOTP_ENCRYPTION_KEY.encode("ascii"))
 DUMMY_PASSWORD_HASH = generate_password_hash(secrets.token_urlsafe(32))
 ALLOWED_IMAGE_FORMATS = {"JPEG", "PNG", "WEBP"}
-MOODS = {"醫뗭쓬", "?ㅻ젞", "?됱삩", "洹몃━?", "?띿긽??}
+MOODS = {"좋음", "설렘", "평온", "그리움", "속상함"}
 Image.MAX_IMAGE_PIXELS = 20_000_000
 app = Flask(__name__)
 app.config.update(
@@ -129,8 +129,8 @@ def init_db():
       username TEXT UNIQUE NOT NULL,
       password_hash TEXT NOT NULL,
       display_name TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT '?ㅻ뒛???됰났???섎（ :)',
-      bio TEXT NOT NULL DEFAULT '?섎쭔???묒? 誘몃땲?덊뵾?낅땲??',
+      status TEXT NOT NULL DEFAULT '오늘도 행복한 하루 :)',
+      bio TEXT NOT NULL DEFAULT '나만의 작은 미니홈피입니다.',
       totp_secret TEXT NOT NULL,
       totp_enabled INTEGER NOT NULL DEFAULT 0,
       last_totp_step INTEGER,
@@ -147,7 +147,7 @@ def init_db():
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
       title TEXT NOT NULL,
       body TEXT NOT NULL,
-      mood TEXT NOT NULL DEFAULT '醫뗭쓬',
+      mood TEXT NOT NULL DEFAULT '좋음',
       created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
@@ -227,7 +227,7 @@ def login_required(view):
     @wraps(view)
     def wrapped(*args, **kwargs):
         if not session.get("user_id"):
-            flash("濡쒓렇?몄씠 ?꾩슂?⑸땲??", "error")
+            flash("로그인이 필요합니다.", "error")
             return redirect(url_for("login"))
         return view(*args, **kwargs)
     return wrapped
@@ -323,7 +323,7 @@ def security_headers(response):
 
 @app.errorhandler(CSRFError)
 def csrf_error(_error):
-    return render_template("error.html", code=400, message="?붿껌??留뚮즺?섏뿀嫄곕굹 ?щ컮瑜댁? ?딆뒿?덈떎. ?섏씠吏瑜??덈줈怨좎묠??二쇱꽭??"), 400
+    return render_template("error.html", code=400, message="요청이 만료되었거나 올바르지 않습니다. 페이지를 새로고침해 주세요."), 400
 
 
 @app.context_processor
@@ -346,19 +346,19 @@ def register():
         password = request.form.get("password", "")
         rate_limit("register", request.remote_addr or "unknown", 10, 3600)
         if not re.fullmatch(r"[a-z0-9_]{3,20}", username):
-            flash("?꾩씠?붾뒗 ?곷Ц쨌?レ옄쨌諛묒쨪 3~20?먮줈 ?낅젰??二쇱꽭??", "error")
+            flash("아이디는 영문·숫자·밑줄 3~20자로 입력해 주세요.", "error")
         elif not (2 <= len(name) <= 30) or len(password) < 12 or len(password) > 128:
-            flash("?대쫫? 2~30?? 鍮꾨?踰덊샇??12~128?먮줈 ?낅젰??二쇱꽭??", "error")
+            flash("이름은 2~30자, 비밀번호는 12~128자로 입력해 주세요.", "error")
         else:
             existing = db().execute("SELECT * FROM users WHERE username=?", (username,)).fetchone()
             if existing:
                 if not existing["totp_enabled"] and check_password_hash(existing["password_hash"], password):
                     session.clear()
                     session["setup_user_id"] = existing["id"]
-                    flash("?대? ?앹꽦??怨꾩젙?낅땲?? OTP ?ㅼ젙???댁뼱???꾨즺??二쇱꽭??", "success")
+                    flash("이미 생성된 계정입니다. OTP 설정을 이어서 완료해 주세요.", "success")
                     return redirect(url_for("otp_setup"))
                 record_attempt("register", request.remote_addr or "unknown")
-                flash("?대? ?ъ슜 以묒씤 ?꾩씠?붿엯?덈떎.", "error")
+                flash("이미 사용 중인 아이디입니다.", "error")
                 return render_template("auth.html", mode="register")
             try:
                 raw_totp = pyotp.random_base32()
@@ -372,7 +372,7 @@ def register():
                 return redirect(url_for("otp_setup"))
             except sqlite3.IntegrityError as error:
                 app.logger.warning("Registration integrity error: %s", error)
-                flash("怨꾩젙????ν븯吏 紐삵뻽?듬땲?? ?낅젰 ?댁슜???뺤씤???ㅼ떆 ?쒕룄??二쇱꽭??", "error")
+                flash("계정을 저장하지 못했습니다. 입력 내용을 확인해 다시 시도해 주세요.", "error")
     return render_template("auth.html", mode="register")
 
 
@@ -393,10 +393,10 @@ def otp_setup():
             codes = generate_recovery_codes(user["id"])
             refreshed = db().execute("SELECT session_version FROM users WHERE id=?", (user["id"],)).fetchone()
             session.clear(); session["user_id"] = user["id"]; session["session_version"] = refreshed["session_version"]; session["new_recovery_codes"] = codes; session.permanent = True
-            flash("?뚯썝媛?낃낵 2李??몄쬆 ?ㅼ젙???꾨즺?섏뿀?듬땲??", "success")
+            flash("회원가입과 2차 인증 설정이 완료되었습니다.", "success")
             return redirect(url_for("recovery_codes"))
         record_attempt("otp", identity)
-        flash("?몄쬆踰덊샇媛 ?щ컮瑜댁? ?딆뒿?덈떎.", "error")
+        flash("인증번호가 올바르지 않습니다.", "error")
     return render_template("otp.html", secret=raw_secret)
 
 
@@ -433,7 +433,7 @@ def login():
             session["pending_user_id"] = user["id"]
             return redirect(url_for("otp_verify"))
         record_attempt("login", identity)
-        flash("?꾩씠???먮뒗 鍮꾨?踰덊샇媛 ?щ컮瑜댁? ?딆뒿?덈떎.", "error")
+        flash("아이디 또는 비밀번호가 올바르지 않습니다.", "error")
     return render_template("auth.html", mode="login")
 
 
@@ -451,7 +451,7 @@ def otp_verify():
             session.clear(); session["user_id"] = user["id"]; session["session_version"] = user["session_version"]; session.permanent = True
             return redirect(url_for("mini_home", username=user["username"]))
         record_attempt("otp", identity)
-        flash("?몄쬆踰덊샇媛 ?щ컮瑜댁? ?딆뒿?덈떎.", "error")
+        flash("인증번호가 올바르지 않습니다.", "error")
     return render_template("otp.html", verify=True)
 
 
@@ -474,20 +474,20 @@ def account_security():
         rate_limit("security", identity, 5, 600)
         if not check_password_hash(g.user["password_hash"], current_password) or not verify_totp_once(g.user, otp_code):
             record_attempt("security", identity)
-            flash("?꾩옱 鍮꾨?踰덊샇 ?먮뒗 OTP媛 ?щ컮瑜댁? ?딆뒿?덈떎.", "error")
+            flash("현재 비밀번호 또는 OTP가 올바르지 않습니다.", "error")
             return render_template("security.html"), 400
         clear_attempts("security", identity)
         if action == "change_password":
             new_password = request.form.get("new_password", "")
             confirmation = request.form.get("new_password_confirm", "")
             if not (12 <= len(new_password) <= 128) or new_password != confirmation or check_password_hash(g.user["password_hash"], new_password):
-                flash("??鍮꾨?踰덊샇??湲곗〈怨??щ씪???섎ŉ 12~128?먮줈 ?숈씪?섍쾶 ?낅젰?댁빞 ?⑸땲??", "error")
+                flash("새 비밀번호는 기존과 달라야 하며 12~128자로 동일하게 입력해야 합니다.", "error")
                 return render_template("security.html"), 400
             db().execute("UPDATE users SET password_hash=?,session_version=session_version+1 WHERE id=?", (generate_password_hash(new_password), g.user["id"]))
             db().commit()
             version = db().execute("SELECT session_version FROM users WHERE id=?", (g.user["id"],)).fetchone()[0]
             session["session_version"] = version
-            flash("鍮꾨?踰덊샇瑜?蹂寃쏀븯怨??ㅻⅨ 濡쒓렇???몄뀡??醫낅즺?덉뒿?덈떎.", "success")
+            flash("비밀번호를 변경하고 다른 로그인 세션을 종료했습니다.", "success")
             return redirect(url_for("account_security"))
         if action == "recovery_codes":
             session["new_recovery_codes"] = generate_recovery_codes(g.user["id"])
@@ -524,14 +524,14 @@ def password_forgot():
             ).fetchone()
         if not user or not code_row or not (12 <= len(new_password) <= 128) or new_password != confirmation:
             record_attempt("recovery", identity)
-            flash("怨꾩젙 ?뺣낫 ?먮뒗 蹂듦뎄 肄붾뱶媛 ?щ컮瑜댁? ?딆뒿?덈떎.", "error")
+            flash("계정 정보 또는 복구 코드가 올바르지 않습니다.", "error")
             return render_template("forgot_password.html"), 400
         db().execute("UPDATE recovery_codes SET used_at=CURRENT_TIMESTAMP WHERE id=?", (code_row["id"],))
         db().execute("UPDATE users SET password_hash=?,session_version=session_version+1 WHERE id=?", (generate_password_hash(new_password), user["id"]))
         db().commit()
         clear_attempts("recovery", identity)
         session.clear()
-        flash("鍮꾨?踰덊샇瑜??ъ꽕?뺥뻽?듬땲?? ??鍮꾨?踰덊샇濡?濡쒓렇?명빐 二쇱꽭??", "success")
+        flash("비밀번호를 재설정했습니다. 새 비밀번호로 로그인해 주세요.", "success")
         return redirect(url_for("login"))
     return render_template("forgot_password.html")
 
@@ -601,11 +601,11 @@ def friend_add(username):
     friend = db().execute("SELECT id FROM users WHERE username=?", (username,)).fetchone()
     if not friend: abort(404)
     if friend["id"] == g.user["id"]:
-        flash("?먭린 ?먯떊? ?댁썐?쇰줈 異붽??????놁뒿?덈떎.", "error")
+        flash("자기 자신은 이웃으로 추가할 수 없습니다.", "error")
     else:
         db().execute("INSERT OR IGNORE INTO friendships(user_id,friend_id) VALUES(?,?)", (g.user["id"], friend["id"]))
         db().commit()
-        flash("?댁썐?쇰줈 異붽??덉뒿?덈떎.", "success")
+        flash("이웃으로 추가했습니다.", "success")
     return redirect(url_for("mini_home", username=username))
 
 
@@ -616,7 +616,7 @@ def friend_remove(username):
     if not friend: abort(404)
     db().execute("DELETE FROM friendships WHERE user_id=? AND friend_id=?", (g.user["id"], friend["id"]))
     db().commit()
-    flash("?댁썐?먯꽌 ??젣?덉뒿?덈떎.", "success")
+    flash("이웃에서 삭제했습니다.", "success")
     return redirect(url_for("mini_home", username=username))
 
 
@@ -627,7 +627,7 @@ def profile():
     status = request.form.get("status", "").strip()
     bio = request.form.get("bio", "").strip()
     if not (2 <= len(display_name) <= 30) or len(status) > 80 or len(bio) > 300:
-        flash("?꾨줈???낅젰 湲몄씠瑜??뺤씤??二쇱꽭??", "error")
+        flash("프로필 입력 길이를 확인해 주세요.", "error")
         return redirect(url_for("mini_home", username=g.user["username"]))
     avatar_filename = g.user["avatar_filename"]
     upload = request.files.get("avatar")
@@ -635,11 +635,11 @@ def profile():
         try:
             avatar_filename = save_avatar(upload, g.user["id"])
         except (Image.DecompressionBombError, UnidentifiedImageError, OSError, ValueError):
-            flash("PNG, JPG ?먮뒗 WEBP ?대?吏 ?뚯씪???좏깮??二쇱꽭??", "error")
+            flash("PNG, JPG 또는 WEBP 이미지 파일을 선택해 주세요.", "error")
             return redirect(url_for("mini_home", username=g.user["username"]))
     db().execute("UPDATE users SET display_name=?,status=?,bio=?,avatar_filename=? WHERE id=?", (
         display_name, status, bio, avatar_filename, g.user["id"]))
-    db().commit(); flash("?꾨줈?꾩쓣 ??ν뻽?듬땲??", "success")
+    db().commit(); flash("프로필을 저장했습니다.", "success")
     return redirect(url_for("mini_home", username=g.user["username"]))
 
 
@@ -648,16 +648,16 @@ def profile():
 def profile_avatar():
     upload = request.files.get("avatar")
     if not upload or not upload.filename:
-        flash("?낅줈?쒗븷 ?ъ쭊???좏깮??二쇱꽭??", "error")
+        flash("업로드할 사진을 선택해 주세요.", "error")
         return redirect(url_for("mini_home", username=g.user["username"]))
     try:
         avatar_filename = save_avatar(upload, g.user["id"])
     except (Image.DecompressionBombError, UnidentifiedImageError, OSError, ValueError):
-        flash("PNG, JPG ?먮뒗 WEBP ?대?吏 ?뚯씪???좏깮??二쇱꽭??", "error")
+        flash("PNG, JPG 또는 WEBP 이미지 파일을 선택해 주세요.", "error")
         return redirect(url_for("mini_home", username=g.user["username"]))
     db().execute("UPDATE users SET avatar_filename=? WHERE id=?", (avatar_filename, g.user["id"]))
     db().commit()
-    flash("?꾨줈???ъ쭊??蹂寃쏀뻽?듬땲??", "success")
+    flash("프로필 사진을 변경했습니다.", "success")
     return redirect(url_for("mini_home", username=g.user["username"]))
 
 
@@ -666,8 +666,8 @@ def profile_avatar():
 def post_new():
     if request.method == "POST":
         title, body = request.form.get("title", "").strip(), request.form.get("body", "").strip()
-        mood = request.form.get("mood", "醫뗭쓬")
-        if not title or not body or len(title) > 100 or len(body) > 5000 or mood not in MOODS: flash("寃뚯떆湲 ?낅젰 ?댁슜???뺤씤??二쇱꽭??", "error")
+        mood = request.form.get("mood", "좋음")
+        if not title or not body or len(title) > 100 or len(body) > 5000 or mood not in MOODS: flash("게시글 입력 내용을 확인해 주세요.", "error")
         else:
             db().execute("INSERT INTO posts(user_id,title,body,mood) VALUES(?,?,?,?)", (g.user["id"], title, body, mood)); db().commit()
             return redirect(url_for("mini_home", username=g.user["username"]))
@@ -684,7 +684,7 @@ def post_detail(post_id):
         if 1 <= len(body) <= 500:
             db().execute("INSERT INTO comments(post_id,user_id,body) VALUES(?,?,?)", (post_id,g.user["id"],body)); db().commit()
             return redirect(url_for("post_detail",post_id=post_id))
-        flash("?볤?? 1~500?먮줈 ?낅젰??二쇱꽭??", "error")
+        flash("댓글은 1~500자로 입력해 주세요.", "error")
     comments = db().execute("SELECT c.*,u.display_name FROM comments c JOIN users u ON u.id=c.user_id WHERE c.post_id=? ORDER BY c.id", (post_id,)).fetchall()
     return render_template("post.html", post=post, comments=comments)
 
@@ -697,7 +697,7 @@ def post_edit(post_id):
     if request.method == "POST":
         title, body, mood = request.form.get("title", "").strip(), request.form.get("body", "").strip(), request.form.get("mood", "")
         if not title or not body or len(title) > 100 or len(body) > 5000 or mood not in MOODS:
-            flash("寃뚯떆湲 ?낅젰 ?댁슜???뺤씤??二쇱꽭??", "error")
+            flash("게시글 입력 내용을 확인해 주세요.", "error")
             return render_template("post_form.html", post=post), 400
         db().execute("UPDATE posts SET title=?,body=?,mood=?,updated_at=CURRENT_TIMESTAMP WHERE id=?", (title,body,mood,post_id)); db().commit()
         return redirect(url_for("post_detail",post_id=post_id))
@@ -720,21 +720,21 @@ def guestbook_add(username):
     if 1 <= len(body) <= 500:
         db().execute("INSERT INTO guestbook(home_user_id,author_id,body,is_secret) VALUES(?,?,?,?)", (owner["id"],g.user["id"],body,1 if request.form.get("secret") else 0)); db().commit()
     else:
-        flash("諛⑸챸濡앹? 1~500?먮줈 ?낅젰??二쇱꽭??", "error")
+        flash("방명록은 1~500자로 입력해 주세요.", "error")
     return redirect(url_for("mini_home",username=username)+"#guestbook")
 
 
 @app.errorhandler(404)
-def not_found(_e): return render_template("error.html", code=404, message="?섏씠吏瑜?李얠쓣 ???놁뼱??"), 404
+def not_found(_e): return render_template("error.html", code=404, message="페이지를 찾을 수 없어요."), 404
 
 @app.errorhandler(403)
-def forbidden(_e): return render_template("error.html", code=403, message="??怨듦컙???ㅼ뼱媛?沅뚰븳???놁뼱??"), 403
+def forbidden(_e): return render_template("error.html", code=403, message="이 공간에 들어갈 권한이 없어요."), 403
 
 @app.errorhandler(413)
-def too_large(_e): return render_template("error.html", code=413, message="?낅줈???뚯씪? 2MB ?댄븯?ъ빞 ?⑸땲??"), 413
+def too_large(_e): return render_template("error.html", code=413, message="업로드 파일은 2MB 이하여야 합니다."), 413
 
 @app.errorhandler(429)
-def too_many(_e): return render_template("error.html", code=429, message="?붿껌???덈Т 留롮뒿?덈떎. ?좎떆 ???ㅼ떆 ?쒕룄??二쇱꽭??"), 429
+def too_many(_e): return render_template("error.html", code=429, message="요청이 너무 많습니다. 잠시 후 다시 시도해 주세요."), 429
 
 
 if __name__ == "__main__":
