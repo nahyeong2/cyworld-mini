@@ -50,6 +50,9 @@ def load_security_keys():
 SECRET_KEY, TOTP_ENCRYPTION_KEY = load_security_keys()
 TOTP_CIPHER = Fernet(TOTP_ENCRYPTION_KEY.encode("ascii"))
 DUMMY_PASSWORD_HASH = generate_password_hash(secrets.token_urlsafe(32))
+SECURE_COOKIES = os.getenv(
+    "COOKIE_SECURE", "1" if os.getenv("APP_ENV") == "production" else "0"
+) == "1"
 ALLOWED_IMAGE_FORMATS = {"JPEG", "PNG", "WEBP"}
 MOODS = {"좋음", "설렘", "평온", "그리움", "속상함"}
 Image.MAX_IMAGE_PIXELS = 20_000_000
@@ -60,8 +63,8 @@ app.config.update(
     MAX_CONTENT_LENGTH=2 * 1024 * 1024,
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_SECURE=os.getenv("APP_ENV") == "production",
-    SESSION_COOKIE_NAME="__Host-miniroom" if os.getenv("APP_ENV") == "production" else "miniroom_session",
+    SESSION_COOKIE_SECURE=SECURE_COOKIES,
+    SESSION_COOKIE_NAME="__Host-miniroom" if SECURE_COOKIES else "miniroom_session",
     PERMANENT_SESSION_LIFETIME=timedelta(minutes=30),
     WTF_CSRF_TIME_LIMIT=7200,
     MAX_FORM_MEMORY_SIZE=2 * 1024 * 1024,
@@ -316,7 +319,7 @@ def security_headers(response):
     )
     if g.get("user"):
         response.headers["Cache-Control"] = "no-store"
-    if os.getenv("APP_ENV") == "production":
+    if SECURE_COOKIES:
         response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains; preload"
     return response
 
