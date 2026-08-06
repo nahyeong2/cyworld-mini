@@ -34,16 +34,9 @@ python app.py
 
 로컬 실행용 보안키는 최초 실행 때 `instance/local-secrets.json`에 무작위로 생성되며 Git에서 제외됩니다. 이 파일을 잃으면 기존 OTP 비밀키를 복호화할 수 없으므로 백업에 포함해야 합니다.
 
-## 운영 배포
-
-- `APP_ENV=production`, `SECRET_KEY`, `TOTP_ENCRYPTION_KEY`가 모두 필요합니다. 누락되면 서버가 의도적으로 실행되지 않습니다.
-- `SECRET_KEY`는 최소 64바이트 무작위 값, `TOTP_ENCRYPTION_KEY`는 Fernet 키를 사용합니다.
-
 ## Docker 실행
 
-Docker Desktop을 설치한 뒤 `.env.docker.example`을 `.env`로 복사하고 안전한
-`SECRET_KEY`와 `TOTP_ENCRYPTION_KEY`를 설정합니다. 이후 Docker Compose로
-빌드하고 실행합니다.
+Docker Desktop을 설치한 뒤 Docker Compose로 빌드하고 실행합니다.
 
 ```bash
 docker compose up --build -d
@@ -56,13 +49,10 @@ docker compose up --build -d
 
 모든 소스 파일과 Linux 컨테이너의 로케일, Python 입출력 및 HTTP 텍스트 응답은
 UTF-8로 고정되어 있습니다.
+
+컨테이너를 처음 시작할 때 `openssl`이 Flask 세션 키와 TOTP 암호화 키를 자동으로
+생성합니다. 키는 이미지나 저장소가 아닌 `miniroom-db` 볼륨의 `runtime-secrets`
+파일에 권한 `600`으로 보관되므로 컨테이너를 다시 만들어도 유지됩니다.
 - TLS를 종료하는 Nginx/ALB 뒤에서 Gunicorn을 실행하고 HTTP를 HTTPS로 강제 전환해야 합니다.
 - 다중 서버 환경에서는 SQLite 대신 관리형 PostgreSQL로 마이그레이션하고 인증 시도 제한 저장소도 공유해야 합니다.
-- 운영 비밀키는 소스나 이미지에 넣지 말고 AWS Secrets Manager 등의 비밀 저장소에서 주입합니다.
-
-키 생성 예시:
-
-```powershell
-python -c "import secrets; print(secrets.token_urlsafe(64))"
-python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-```
+- 다중 서버 운영에서는 자동 생성 파일 대신 AWS Secrets Manager 등의 비밀 저장소를 사용해야 합니다.
