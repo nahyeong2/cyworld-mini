@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+{% block title %}사람 찾기 · Miniroom{% endblock %}
+{% block body %}
+<main class="search-page">
+  <header class="search-heading">
+    <span class="eyebrow">DISCOVER PEOPLE</span>
+    <h1>다른 미니홈피 둘러보기</h1>
+    <p>이름이나 아이디로 친구를 찾아 작은 공간에 놀러 가보세요.</p>
+  </header>
+  {% if query %}
+    <div class="search-summary"><b>“{{query}}”</b> 검색 결과 <span>{{users|length}}</span>명</div>
+    <section class="user-results">
+      {% for user in users %}
+        <article class="user-result">
+          <a class="result-main" href="{{url_for('mini_home',username=user.username)}}">
+          <div class="result-avatar">
+            {% if user.avatar_filename %}<img src="{{url_for('static',filename='uploads/'+user.avatar_filename)}}" alt="">{% else %}<span>{{user.display_name[0]}}</span>{% endif %}
+          </div>
+          <div class="result-copy"><h2>{{user.display_name}}</h2><small>@{{user.username}}</small><p>{{user.status}}</p></div>
+          </a>
+          <div class="result-actions"><a class="visit-arrow" href="{{url_for('mini_home',username=user.username)}}">방문하기 →</a><form method="post" action="{{url_for('friend_remove' if user.is_friend else 'friend_add',username=user.username)}}"><button class="tiny {{'friend-active' if user.is_friend}}">{{'이웃 해제' if user.is_friend else '+ 이웃 추가'}}</button></form></div>
+        </article>
+      {% else %}
+        <div class="search-empty"><b>검색 결과가 없습니다.</b><p>아이디 철자나 이름을 다시 확인해 주세요.</p></div>
+      {% endfor %}
+    </section>
+  {% else %}
+    <div class="search-empty"><b>누구를 찾고 있나요?</b><p>상단 검색창에 이름 또는 아이디를 입력해 주세요.</p></div>
+  {% endif %}
+</main>
+{% endblock %}

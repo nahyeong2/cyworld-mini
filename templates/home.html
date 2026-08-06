@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+{% block title %}{{owner.display_name}}의 미니홈피{% endblock %}
+{% block body %}
+<main class="desktop">
+  <div class="counter">TODAY <b>{{today_count}}</b>　TOTAL <b>{{total}}</b></div>
+  <section class="minihome">
+    <aside class="profile-card">
+      <div class="profile-photo">
+        {% if owner.avatar_filename %}
+          <img src="{{url_for('static',filename='uploads/'+owner.avatar_filename)}}" alt="{{owner.display_name}}의 프로필 사진">
+        {% else %}
+          <span>{{owner.display_name[0]}}</span>
+        {% endif %}
+        {% if owner.id==g.user.id %}
+          <form class="avatar-direct-form" method="post" enctype="multipart/form-data" action="{{url_for('profile_avatar')}}">
+            <label class="photo-overlay" title="클릭하여 프로필 사진 변경">📷<b>사진 변경</b><input type="file" name="avatar" accept="image/png,image/jpeg,image/webp" data-auto-submit></label>
+          </form>
+        {% endif %}
+      </div>
+      <h2>{{owner.display_name}}</h2>
+      <p class="handle">@{{owner.username}}</p>
+      <blockquote>{{owner.bio}}</blockquote>
+      <div class="mood">🌱 {{owner.status}}</div>
+      {% if owner.id!=g.user.id %}
+        <form class="friend-action" method="post" action="{{url_for('friend_remove' if is_friend else 'friend_add',username=owner.username)}}">
+          <button class="tiny {{'friend-active' if is_friend}}">{{'✓ 이웃 맺음 · 해제' if is_friend else '+ 이웃 추가'}}</button>
+        </form>
+      {% endif %}
+      {% if owner.id==g.user.id %}
+        <button class="tiny" data-toggle="profile-edit">프로필 수정</button>
+        <form method="post" enctype="multipart/form-data" action="{{url_for('profile')}}" id="profile-edit" class="profile-edit hidden">
+          <label class="avatar-upload">프로필 사진<input type="file" name="avatar" accept="image/png,image/jpeg,image/webp"></label>
+          <input name="display_name" value="{{owner.display_name}}" maxlength="30" placeholder="이름">
+          <input name="status" value="{{owner.status}}" maxlength="80" placeholder="상태 메시지">
+          <textarea name="bio" maxlength="300" placeholder="소개">{{owner.bio}}</textarea>
+          <button class="tiny">저장</button>
+        </form>
+      {% endif %}
+      <div class="people">
+        <b>이웃 미니홈피</b>
+        {% for f in friends %}
+          <a href="{{url_for('mini_home',username=f.username)}}">{% if f.avatar_filename %}<span class="friend-thumb"><img src="{{url_for('static',filename='uploads/'+f.avatar_filename)}}" alt=""></span>{% else %}<span>{{f.display_name[0]}}</span>{% endif %}{{f.display_name}}<small>{{f.status}}</small></a>
+        {% else %}<p>아직 이웃이 없어요.</p>{% endfor %}
+      </div>
+      {% if owner.id==g.user.id and suggestions %}
+        <div class="suggestions">
+          <div class="suggestion-title"><b>이웃 추천</b><a href="{{url_for('user_search')}}">더 찾아보기</a></div>
+          {% for user in suggestions %}
+            <div class="suggestion-person">
+              <a class="suggestion-profile" href="{{url_for('mini_home',username=user.username)}}">
+                {% if user.avatar_filename %}<span><img src="{{url_for('static',filename='uploads/'+user.avatar_filename)}}" alt=""></span>{% else %}<span>{{user.display_name[0]}}</span>{% endif %}
+                <div><b>{{user.display_name}}</b><small>@{{user.username}}</small>{% if user.mutual_count %}<em>함께 아는 이웃 {{user.mutual_count}}명</em>{% endif %}</div>
+              </a>
+              <form method="post" action="{{url_for('friend_add',username=user.username)}}"><button title="{{user.display_name}} 이웃 추가">+</button></form>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </aside>
+    <section class="content-card">
+      <header class="home-title"><div><span>MY MINIROOM</span><h1>{{owner.status}}</h1></div>{% if owner.id==g.user.id %}<a href="{{url_for('post_new')}}" class="tiny">+ 새 글</a>{% endif %}</header>
+      <div class="room-scene" aria-label="푸른 야경이 보이는 나만의 미니룸">
+        <div class="room-glow"></div>
+        <div class="city-window"><div class="moon"></div><div class="skyline"><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+        <div class="wall-art"><span>MAKE</span><b>YOUR<br>SPACE</b></div>
+        <div class="desk"><div class="monitor"><div class="monitor-screen"><span>MINIROOM</span><i></i></div></div><div class="desk-leg one"></div><div class="desk-leg two"></div></div>
+        <div class="lamp"><i></i></div>
+        <div class="plant"><div class="leaf l1"></div><div class="leaf l2"></div><div class="leaf l3"></div><div class="pot"></div></div>
+        <div class="chair"><div></div></div>
+        <div class="room-caption"><span>MY PRIVATE SPACE</span><b>우리들의 작은 이야기</b></div>
+      </div>
+      <div class="section-head"><h3>최근 다이어리</h3><span>{{posts|length}} stories</span></div>
+      <div class="posts">
+        {% for p in posts %}<a class="post-row" href="{{url_for('post_detail',post_id=p.id)}}"><span class="date">{{p.created_at[5:10]}}</span><div><b>{{p.title}}</b><small>{{p.body[:70]}}{{'…' if p.body|length>70}}</small></div><i>{{p.mood}}</i></a>
+        {% else %}<div class="empty">아직 기록이 없어요. 첫 이야기를 남겨보세요.</div>{% endfor %}
+      </div>
+      <div class="section-head" id="guestbook"><h3>방명록</h3><span>say hello!</span></div>
+      <form method="post" action="{{url_for('guestbook_add',username=owner.username)}}" class="guest-form"><input name="body" maxlength="500" required placeholder="따뜻한 한마디를 남겨주세요"><label><input type="checkbox" name="secret"> 비밀글</label><button class="tiny">남기기</button></form>
+      <div class="guest-list">
+        {% for item in guests %}<div><b>{{item.display_name}}</b><p>{% if item.is_secret and g.user.id not in [owner.id,item.author_id] %}🔒 비밀글입니다.{% else %}{{item.body}}{% endif %}</p><time>{{item.created_at[:16]}}</time></div>
+        {% else %}<div class="empty">첫 방명록의 주인공이 되어보세요.</div>{% endfor %}
+      </div>
+    </section>
+  </section>
+</main>
+{% endblock %}

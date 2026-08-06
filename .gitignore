@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+*.log
+*.db
+.env
+instance/
+static/otp.png
+static/uploads/*
+!static/uploads/.gitkeep
