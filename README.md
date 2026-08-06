@@ -42,6 +42,12 @@ python app.py
 
 - `APP_ENV=production`, `SECRET_KEY`, `TOTP_ENCRYPTION_KEY`가 모두 필요합니다. 누락되면 서버가 의도적으로 실행되지 않습니다.
 - `SECRET_KEY`는 최소 64바이트 무작위 값, `TOTP_ENCRYPTION_KEY`는 Fernet 키를 사용합니다.
+
+## PythonAnywhere 배포
+
+배포 계정은 `nahyeong2`, 프로젝트 경로는 `/home/nahyeong2/cyworld-mini`를 사용합니다.
+WSGI 설정 파일에는 저장소의 `pythonanywhere_wsgi.py` 내용을 사용하고, 실제 보안 키는
+저장소에 올리지 않고 `/home/nahyeong2/.config/miniroom.env`에 보관합니다.
 - TLS를 종료하는 Nginx/ALB 뒤에서 Gunicorn을 실행하고 HTTP를 HTTPS로 강제 전환해야 합니다.
 - 다중 서버 환경에서는 SQLite 대신 관리형 PostgreSQL로 마이그레이션하고 인증 시도 제한 저장소도 공유해야 합니다.
 - 운영 비밀키는 소스나 이미지에 넣지 말고 AWS Secrets Manager 등의 비밀 저장소에서 주입합니다.

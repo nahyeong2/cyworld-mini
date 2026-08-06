@@ -70,6 +70,11 @@ app.config.update(
 csrf = CSRFProtect(app)
 
 
+@app.get("/healthz")
+def healthz():
+    return {"status": "ok"}
+
+
 def encrypt_totp(secret):
     return TOTP_CIPHER.encrypt(secret.encode("ascii")).decode("ascii")
 
