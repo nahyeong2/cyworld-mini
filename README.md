@@ -42,7 +42,7 @@ Docker Desktop을 설치한 뒤 Docker Compose로 빌드하고 실행합니다.
 docker compose up --build -d
 ```
 
-웹사이트는 `http://127.0.0.1:8000`, 상태 확인은 `/healthz`에서 가능합니다.
+웹사이트는 `http://localhost:8000`, 상태 확인은 `/healthz`에서 가능합니다.
 회원 데이터와 업로드 사진은 각각 `miniroom-db`, `miniroom-uploads` Docker 볼륨에
 보존됩니다. 중지는 `docker compose down`, 재실행은 `docker compose up -d`를
 사용합니다. 데이터를 유지하려면 `docker compose down -v`는 사용하지 않습니다.
