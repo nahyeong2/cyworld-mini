@@ -1,0 +1,12 @@
+.git
+.gitignore
+.venv
+__pycache__
+*.pyc
+*.db
+*.log
+.env
+instance
+static/uploads/*
+!static/uploads/.gitkeep
+work
